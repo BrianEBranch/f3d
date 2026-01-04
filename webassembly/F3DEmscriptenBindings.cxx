@@ -617,6 +617,9 @@ EMSCRIPTEN_BINDINGS(f3d)
     .property("viewAngle",
       static_cast<f3d::angle_deg_t (f3d::camera::*)() const>(&f3d::camera::getViewAngle),
       &f3d::camera::setViewAngle)
+    .function("getWorldAzimuth", &f3d::camera::getWorldAzimuth)
+    .function("getWorldElevation", &f3d::camera::getWorldElevation)
+    .function("getDistance", &f3d::camera::getDistance)
     .property(
       "state", +[](const f3d::camera& cam) -> f3d::camera_state_t { return cam.getState(); },
       +[](f3d::camera& cam, const f3d::camera_state_t& state) -> f3d::camera&
