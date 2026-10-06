@@ -2,6 +2,7 @@
 
 #include <vtkCamera.h>
 #include <vtkMatrix4x4.h>
+#include <vtkPlane.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderer.h>
 #include <vtkVersion.h>
@@ -116,64 +117,33 @@ void camera_impl::getPositionToFocalVector(vector3_t& vec) const
 //----------------------------------------------------------------------------
 double camera_impl::getWorldAzimuth() const
 {
-  vector3_t view;
-  this->getPositionToFocalVector(view);
-  vtkMath::Normalize(view.data());
-
   vtkRenderer* ren = this->Internals->VTKRenderer;
   const double* up = ren->GetEnvironmentUp();
-  const double* right = ren->GetEnvironmentRight();
 
-  // Derive environment forward = up × right
-  vector3_t forward;
-  vtkMath::Cross(up, right, forward.data());
-  vtkMath::Normalize(forward.data());
-
-  vector3_t projUp;
-  vtkMath::ProjectVector(view.data(), up, projUp.data());
-
-  vector3_t horizontal;
-  vtkMath::Subtract(view.data(), projUp.data(), horizontal.data());
+  double projectedView[3];
+  vtkPlane::ProjectVector(this->GetVTKCamera()->GetDirectionOfProjection(), this->getFocalPoint().data(), up, projectedView);
 
   static constexpr double EPS = 128 * std::numeric_limits<double>::epsilon();
-  if (vtkMath::Norm(horizontal.data()) < EPS)
+  if (vtkMath::Norm(projectedView) < EPS)
   {
     return 0.0;
   }
 
-  vtkMath::Normalize(horizontal.data());
+  const double angleRad = vtkMath::SignedAngleBetweenVectors(ren->GetEnvironmentRight(), projectedView, up);
 
-  double angleRad = vtkMath::SignedAngleBetweenVectors(horizontal.data(), forward.data(), up);
-
-  return vtkMath::DegreesFromRadians(angleRad);
+  return vtkMath::DegreesFromRadians(angleRad) - 90.0;
 }
 
 //----------------------------------------------------------------------------
 double camera_impl::getWorldElevation() const
 {
-  vector3_t view;
-  this->getPositionToFocalVector(view);
-
-  static constexpr double EPS = 128 * std::numeric_limits<double>::epsilon();
-  if (vtkMath::Norm(view.data()) < EPS)
-  {
-    return 0.0;
-  }
-  vtkMath::Normalize(view.data());
-
-  vtkRenderer* ren = this->Internals->VTKRenderer;
-  double* up = ren->GetEnvironmentUp();
-
-  double angleRad = vtkMath::AngleBetweenVectors(view.data(), up);
-  return 90.0 - vtkMath::DegreesFromRadians(angleRad);
+  double* view = this->GetVTKCamera()->GetDirectionOfProjection();
 }
 
 //----------------------------------------------------------------------------
 double camera_impl::getDistance() const
 {
-  vector3_t v;
-  this->getPositionToFocalVector(v);
-  return vtkMath::Norm(v.data());
+  return this->GetVTKCamera()->GetDistance();
 }
 
 //----------------------------------------------------------------------------
